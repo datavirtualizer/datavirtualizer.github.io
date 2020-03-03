@@ -3,3 +3,5 @@
 ### Bulma Framework for UI 
 
 Future improvements: file correction check, better chart scale, less button, ritcher bars with different colors
+
+JS libs: jquery, chartjs, bulma framework fur UI, seedrandom
