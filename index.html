@@ -1,0 +1,518 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+<!-- For mobile applications and character support -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- required css libraries provided by cdn which is a free cloud library service -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.8.0/css/bulma.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.min.css">
+<link rel="stylesheet" href="/style.css">
+
+<title>Data Virtualizer</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/0.2.0/Chart.min.js" type="text/javascript"></script>
+</head>
+
+<!-- header with bulma css framework similar to bootstrap -->
+<body>
+  <section class="section">
+    <div class="container">
+      <h1 class="title">
+        Data Virtualizer
+      </h1>
+      <h2 class="subtitle">
+        A simple task which shows random numbers in a bar chart!
+      </h2>
+	  <p>You can change min-max values and interval dinamically.</p>
+	  <br/>
+	   <p>Charts can be scrolled horizontally.</p>
+	    <br/>
+	   <p>Charts can be saved and loaded. </p>
+	   <p>Push start button. After creating some data push stop button. Now you can store the data. Refresh the page and load data you stored.</p>
+    </div>
+  </section>
+  <!-- bar graph with chart.js -->
+  
+
+		
+  <section class="section">
+		<div class="container">
+
+		<div class="columns">
+
+			<div class="column  ">
+		 
+				<div class="field is-horizontal">
+				  <div class="field-label is-normal">
+					<label class="label">Channel Count</label>
+				  </div>
+				  <div class="field-body">
+					<div class="field">
+					  <p class="control">
+						<input id="channelCount" class="input" type="number" value="1" />
+
+					  </p>
+					</div>
+				  </div>
+				</div>
+			</div>
+			<div class="column  ">
+		  
+				<div class="field is-horizontal">
+				
+				  <div class="field-label is-normal">
+					<label class="label">Interval <small>(sec)</small></label>
+				  </div>
+				  <div class="field-body">
+					<div class="field">
+					  <p class="control">
+						
+						<input id="interval" class="input" type="number" value="1" />
+
+					  </p>
+					</div>
+				  </div>
+				</div>
+			</div>
+		</div>
+		<hr/>
+		 <div class="columns">
+				<div class="field is-horizontal column">
+				  <div class="field-label is-normal">
+					<label class="label">Min Val</label>
+				  </div>
+				  <div class="field-body">
+					<div class="field">
+					  <p class="control">
+						<input id="minValue" class="input" type="number" value="0" />
+
+					  </p>
+					</div>
+				  </div>
+				</div>
+				<div class="field is-horizontal column">
+				  <div class="field-label is-normal">
+					<label class="label">Max Val</label>
+				  </div>
+				  <div class="field-body">
+					<div class="field">
+					  <p class="control">
+						<input id="maxValue" class="input" type="number" value="10" />
+
+					  </p>
+					</div>
+				  </div>
+				</div>
+		</div>
+		<div class="container field is-centered   has-text-centered  ">
+				 
+					<label class="label">Interval Count: <span id="count">0</span></label>
+				  
+				 
+			</div>
+		
+							<div class="container is-centered   has-text-centered  ">
+		 
+				<button class="button is-primary" id="start">Start</button>
+				<button class="button is-link" id="stop">Stop</button> 
+				<button class="button is-success" id="save">Save</button>
+				<button class="button is-warning" id="load">Load</button> 
+				<input id="files" type="file" name="file" class="myfile" style="display:none;">
+
+			</div>
+    </div>
+  </section>
+  
+  <section class="section">
+		<div id="charts" class="container">
+
+
+
+    </div>
+  </section>
+
+
+  <!-- required js libraries provided by cdn -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.min.js" type="text/javascript"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js" type="text/javascript"></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/seedrandom/3.0.5/seedrandom.min.js" type="text/javascript"></script>
+ <script src="https://unpkg.com/flatted@2.0.1/min.js" type="text/javascript"></script>
+  <script>
+function stringify(obj, replacer, spaces, cycleReplacer) {
+  return JSON.stringify(obj, serializer(replacer, cycleReplacer), spaces)
+}
+
+function serializer(replacer, cycleReplacer) {
+  var stack = [], keys = []
+
+  if (cycleReplacer == null) cycleReplacer = function(key, value) {
+    if (stack[0] === value) return "[Circular ~]"
+    return "[Circular ~." + keys.slice(0, stack.indexOf(value)).join(".") + "]"
+  }
+
+  return function(key, value) {
+    if (stack.length > 0) {
+      var thisPos = stack.indexOf(this)
+      ~thisPos ? stack.splice(thisPos + 1) : stack.push(this)
+      ~thisPos ? keys.splice(thisPos, Infinity, key) : keys.push(key)
+      if (~stack.indexOf(value)) value = cycleReplacer.call(this, key, value)
+    }
+    else stack.push(value)
+
+    return replacer == null ? value : replacer.call(this, key, value)
+  }
+}
+
+
+var counter = 0;
+var charts = [];
+var channelCount = 0;
+var interval = 0;
+var minValue = 0;
+var maxValue = 0;	 
+var isLoaded = false;
+	
+	
+	function initOption(maxv,minv){
+		var option = {
+			  responsive: true,
+			  maintainAspectRatio: false,
+			  scales: {
+				yAxes: [{
+					ticks: {
+						max: maxv,
+						min: minv,
+						stepSize: 1
+					}
+				}]
+			  }
+		};
+		
+		return option;
+	}
+	
+	function initCharts(ctx1,i){
+		
+		var option = initOption(parseInt(maxValue),parseInt(minValue));
+		var chart = new Chart(ctx1, {
+  		 
+			type: 'bar',
+			 
+			data: {
+				labels: ['1','2','3','4','5','6','7','8','9','10'],
+				datasets: [{
+					label: 'Channel '+i,
+					backgroundColor: 'rgb('+Math.floor(Math.random() * 256)+', '+Math.floor(Math.random() * 256)+', 255)',
+					borderColor: 'rgb(99, 132, 255)',
+					data: []
+				}]
+			},
+	  
+			 
+			options: option,
+		});
+		
+		return chart;
+	}
+	
+  	
+	
+  
+
+
+	function addData(chart, label, data) {
+	
+		
+		if (counter > 10) {
+		  chart.data.labels.push(counter);
+		  var newwidth = $('.chartAreaWrapper2').width() +30;
+		  $('.chartAreaWrapper2').width(newwidth); 
+		}
+		
+		chart.data.datasets.forEach((dataset) => {
+			dataset.data.push(data);
+		});
+		
+		chart.update();
+	}
+	
+
+	
+function setNewTimer() {
+ 
+		function run() {
+		
+ 
+			counter +=1;			
+			$("#count").text(counter);
+			 
+			
+			for(i = 0; i< channelCount; i++){
+				var prng1 = new Math.seedrandom('rand'+i, { entropy: true });
+				var rand1 = Math.round( (prng1() * (maxValue - minValue) + minValue ))  ;
+				console.log(rand1);
+				 
+				addData(charts[i],'Channel ' + i, rand1);
+			}
+		
+			//timer = setTimeout(run, 1000);
+		}
+		
+    return setInterval(run, interval*1000);
+}
+
+var new_timer;
+
+	
+    $("#start").click( function() {
+	
+	if (isLoaded){
+	
+	interval = $("#interval").val();
+			minValue = $("#minValue").val();
+			maxValue = $("#maxValue").val();
+			
+			
+	clearInterval(new_timer);
+	new_timer = setNewTimer();
+	} else {
+		counter = 0;
+		charts = [];
+		 
+			channelCount = $("#channelCount").val();
+			interval = $("#interval").val();
+			minValue = $("#minValue").val();
+			maxValue = $("#maxValue").val();
+			
+			
+			 clearInterval(new_timer);
+			$( "#charts" ).empty();
+			for(i = 0; i< channelCount; i++){
+				$( "#charts" ).append( ' 		<div class="columns">'+
+			'	<div class="column is-8 is-offset-2">'+
+			'	<h2 class="subtitle">Channel '+(i+1)+'</h2>'+
+			'		<div class="chartWrapper">'+
+			'		  <div class="chartAreaWrapper">'+
+			'			<div class="chartAreaWrapper2">'+
+			'				<canvas id="canvas'+i+'"></canvas>'+
+			'			</div>'+
+			'		  </div>'+
+			'			'+
+			'			<canvas id="myChartAxis" height="300" width="0"></canvas>'+
+			'		</div>'+
+			'	</div>'+
+			'</div>' );
+
+				var ctx1 = document.getElementById('canvas'+i).getContext('2d');
+				charts.push(initCharts(ctx1, i+1)	);
+			}
+		
+		 
+		 new_timer = setNewTimer();
+	}
+
+    });
+	
+    $("#stop").click( function() {
+		 
+		clearInterval(new_timer);
+    });
+	
+    $("#save").click( function() {
+		 
+		 
+		 
+		var array = {};
+		
+			for(i = 0; i< channelCount; i++){
+				array['Channel ' + i] = charts[i].data.datasets[0].data;
+				 
+				 
+			}
+		
+		var a = document.body.appendChild(
+			document.createElement("a")
+		);
+		a.download = "export.txt";
+		a.href = "data:text/plain;base64," + btoa(stringify(array));
+		a.innerHTML = "download example text";
+		a.style.display = "none"; 
+		a.click();
+    });	
+	
+ 
+function processFile(e) {
+    var file = e.target.result,
+        results;
+    if (file && file.length) {
+        results = file ;
+        // load data
+		
+		var obj = JSON.parse(results);
+		
+		minValue = 0;
+		maxValue = 10;
+		
+	counter = 0;
+	charts = [];
+ 	 
+		channelCount = Object.keys(obj).length;
+ 
+		
+		
+		 clearInterval(new_timer);
+		$( "#charts" ).empty();
+		  
+		
+		
+ 
+		
+		clearInterval(new_timer);
+		
+		$( "#charts" ).empty();
+		
+		
+		
+		for(i = 0; i< Object.keys(obj).length ; i++){
+			$( "#charts" ).append( ' 		<div class="columns">'+
+		'	<div class="column is-8 is-offset-2">'+
+		'	<h2 class="subtitle">'+Object.keys(obj)[i]+'</h2>'+
+		'		<div class="chartWrapper">'+
+		'		  <div class="chartAreaWrapper">'+
+		'			<div class="chartAreaWrapper2">'+
+		'				<canvas id="'+Object.keys(obj)[i]+'"></canvas>'+
+		'			</div>'+
+		'		  </div>'+
+		'			'+
+		'			<canvas id="myChartAxis" height="300" width="0"></canvas>'+
+		'		</div>'+
+		'	</div>'+
+		'</div>' );
+
+			var ctx1 = document.getElementById(Object.keys(obj)[i]).getContext('2d');
+			charts.push(initCharts(ctx1, i+1)	);
+			
+			var data = obj[Object.keys(obj)[i]];
+			console.log(data);
+			counter = data.length;
+			for(j = 0; j< data.length; j++){	
+				  console.log("key ve value");
+				 console.log(Object.keys(obj)[i]);
+				 console.log(data[i]);
+				 console.log(i);
+				addData(charts[i],Object.keys(obj)[i], data[j]);
+			}
+		}
+		
+		
+		isLoaded = true;
+		
+		 
+		 
+    }
+}
+
+
+	$(document).ready(function() { 
+        $('input[type="file"]').change(function() { 
+		 
+		if (!window.FileReader) {
+				alert('Your browser is not supported')
+			}
+			var fileInput = $('#files');
+			
+			var input = fileInput.get(0);
+			
+			// Create a reader object
+			var reader = new FileReader();
+			if (input.files.length) {
+				var textFile = input.files[0];
+				reader.readAsText(textFile);
+				$(reader).on('load', processFile);
+			} else {
+				alert('Please upload a file before continuing')
+			} 
+              
+        }); 
+    });
+	
+    $("#load").click( function() {
+		 
+		 
+		$(".myfile").click(); 
+		
+    });		
+	$( "#interval" ) .change(function () {    
+		 interval = $("#interval").val();
+		 
+		 if (interval <= 0){
+			$("#interval").val(1);
+		 } else {
+			 clearInterval(new_timer);
+			 new_timer = setNewTimer();
+		 }
+		 
+
+		 
+		 
+	});  
+	
+	$( "#minValue" ) .change(function () {    
+		 minValue = parseInt($("#minValue").val());
+		  maxValue = parseInt($("#maxValue").val());
+		 
+		 if (minValue <= 0){
+			$("#minValue").val(0);
+		 } else if (minValue >= maxValue) {
+			$("#minValue").val(parseInt(maxValue)-1);
+			}
+			else{
+			
+			for(i = 0; i< channelCount; i++){
+				charts[i].options = initOption(maxValue,minValue)
+				charts[i].update();
+			}
+			
+			
+			 
+			 clearInterval(new_timer);
+			 new_timer = setNewTimer();
+		 }
+		 
+
+		 
+		 
+	});  
+	
+	$( "#maxValue" ) .change(function () {    
+		 minValue = parseInt($("#minValue").val());
+		  maxValue = parseInt($("#maxValue").val());
+		 
+		 if (maxValue >= 100){
+			$("#minValue").val(100);
+		 } else if (minValue >= maxValue) {
+			$("#maxValue").val(minValue+1);
+			}
+			else{
+			
+			for(i = 0; i< channelCount; i++){
+				charts[i].options = initOption(maxValue,minValue)
+				charts[i].update();
+			}
+			
+			
+			 
+			 clearInterval(new_timer);
+			 new_timer = setNewTimer();
+		 }
+		 
+	});  
+  </script>
+
+</body>
+
+
+
+</html>
